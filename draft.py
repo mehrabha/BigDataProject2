@@ -14,12 +14,12 @@ sc = SparkContext("local", "First App")
 all_names = sc.textFile(names_file)
 
 # list containing tuples (docname, its url)
-names_url = all_names.flatMap(lambda line: line.split("\n")) \
+name_url = all_names.flatMap(lambda line: line.split("\n")) \
     .map(lambda name: (name, "hdfs://localhost:9000/temp/" + name)) \
     .collect()
 
 # number of documents
-size_of_corpus = len(names_url)
+size_of_corpus = len(name_url)
 
 
 
@@ -30,7 +30,7 @@ name__list_of_words = sc.parallelize([(pair[0],
                                        sc.textFile(pair[1])
                                        .flatMap(lambda line: line.split(" "))
                                        .collect())
-                                      for pair in names_url])
+                                      for pair in name_url])
 
 # RDD containing tuples ((docname, word), local tf)
 # Local tf for current (docname, word) equals to 1/(number of words in the document)
@@ -41,8 +41,8 @@ doc_word__local_tf = name__list_of_words.flatMap(lambda pair: [((pair[0], word),
 doc_word__tf = doc_word__local_tf.reduceByKey(lambda x, y: x + y)
 
 # Reduced RDD (word, number of distinct docs in which this word occurs)
-word__num_of_doc = sc.parallelize(list(name__list_of_words
-                                       .flatMap(lambda pair: [(word, pair[0]) for word in pair[1]])
+word__num_of_doc = sc.parallelize(list(doc_word__tf
+                                       .map(lambda pair: (pair[0][1], pair[0][0]))
                                        .distinct()
                                        .countByKey()
                                        .items()))
@@ -69,13 +69,10 @@ word_doc__tfidt = joined.map(lambda pair: ((pair[0], pair[1][0][0]), pair[1][0][
 # PART 2: TERM-TERM frequency
 
 
-# Map joined RDD is (word, (docname, tf*idf))
-word__doc_tfidt = joined.map(lambda pair: (pair[0], (pair[1][0][0], pair[1][0][1] * pair[1][1])))
-
 # List of tuples (docname, tf*idf) for input_term
-input_tuples = word__doc_tfidt \
-    .filter(lambda pair: pair[0] == input_term) \
-    .map(lambda pair: (pair[1][0], pair[1][1])) \
+input_tuples = word_doc__tfidt \
+    .filter(lambda pair: pair[0][0] == input_term) \
+    .map(lambda pair: (pair[0][1], pair[1])) \
     .collect()
 # Put them into dictionary (it basically corresponds to the row corresponding to input_term)
 input_dictionary = dict(input_tuples)
@@ -90,8 +87,8 @@ word__numerator = word_doc__tfidt \
     .map(lambda pair: (pair[0][0], pair[1] * input_dictionary.get(pair[0][1], 0))) \
     .reduceByKey(lambda x, y: x + y)
 
-# From (word, ((docname, tf), idf)) map RDD is (word, (tf*idf)^2)
-word__squared_tfidt = joined.map(lambda pair: (pair[0], (pair[1][0][1] * pair[1][1]) ** 2))
+# From ((word, docname), tf*idf) map RDD is (word, (tf*idf)^2)
+word__squared_tfidt = word_doc__tfidt.map(lambda pair: (pair[0][0], (pair[1])**2))
 # Then reduced it to RDD (word, sqrt(tfidf1^2+tfidf2^2+...)*input_sqrt_of_sqr_values) to create a denominator
 # from slide 70 for each word
 word__denominator = word__squared_tfidt.reduceByKey(lambda x, y: x + y) \
@@ -106,7 +103,7 @@ sorted_result = joined_num_and_denum \
     .map(lambda pair: (pair[0], pair[1][0] / pair[1][1])) \
     .map(lambda pair: (pair[1], pair[0])) \
     .sortByKey(False) \
-    .map(lambda pair: (pair[1], pair[0])) \
+    .map(lambda pair: ((input_term, pair[1]), pair[0])) \
     .collect()
 
 print(sorted_result)
