@@ -1,40 +1,35 @@
 # NOTE: I was trying to name RDDs by the following rule: key__value (two "_" between key and value)
 # Run the code using "spark-submit draft.py"
-# Files "names.txt", "D1.txt", "D2.txt", "D3.txt" are stored in temp directory in hdfs
 
 from pyspark import SparkContext
 import math
 import numpy as np
+import re
 
-names_file = "hdfs://localhost:9000/temp/names.txt"
-input_term = "I"    # Query term for term-term relevance
+txt_files = "hdfs://localhost:9000/temp/project2_test.txt"
+input_term = "gene_egf_gene"    # Query term for term-term relevance
 sc = SparkContext("local", "First App")
-
-# RDD of names_file
-all_names = sc.textFile(names_file)
-
-# list containing tuples (docname, its url)
-name_url = all_names.flatMap(lambda line: line.split("\n")) \
-    .map(lambda name: (name, "hdfs://localhost:9000/temp/" + name)) \
-    .collect()
-
-# number of documents
-size_of_corpus = len(name_url)
-
-
 
 # PART 1: TF-IDF
 
-# RDD containing tuples (docname, list of words in it)
-name__list_of_words = sc.parallelize([(pair[0],
-                                       sc.textFile(pair[1])
-                                       .flatMap(lambda line: line.split(" "))
-                                       .collect())
-                                      for pair in name_url])
 
-# RDD containing tuples ((docname, word), local tf)
+# RDD of files
+rdd_files = sc.textFile(txt_files)
+
+# RDD containing tuples (docname, list of words in it). split() string on whitespaces (any number of spaces)
+name__list_of_words = rdd_files.flatMap(lambda line: line.split("\n"))\
+    .map(lambda line: line.split())\
+    .map(lambda line: (line[0], line[1:]))
+
+# number of documents
+size_of_corpus = name__list_of_words.count()
+
+p = re.compile('^(gene_).*(_gene)$')
+# RDD containing tuples ((docname, word), local tf), where word matches the pattern gene_???_gene
 # Local tf for current (docname, word) equals to 1/(number of words in the document)
-doc_word__local_tf = name__list_of_words.flatMap(lambda pair: [((pair[0], word), 1 / len(pair[1])) for word in pair[1]])
+doc_word__local_tf = name__list_of_words\
+    .flatMap(lambda pair: [((pair[0], word), 1 / len(pair[1])) for word in pair[1]])\
+    .filter(lambda pair: p.match(pair[0][1]))
 
 # Reduce ((docname, word), local tf) to ((docname, word), tf) by summarizing local tf.
 # Hence, total tf for each (docname, word) would be (count of word in doc / number of words in doc)
@@ -104,6 +99,6 @@ sorted_result = joined_num_and_denum \
     .map(lambda pair: (pair[1], pair[0])) \
     .sortByKey(False) \
     .map(lambda pair: ((input_term, pair[1]), pair[0])) \
-    .collect()
+    .saveAsTextFile("sorted_result")
 
-print(sorted_result)
+# print(sorted_result)
