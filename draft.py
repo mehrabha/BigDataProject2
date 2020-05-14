@@ -1,14 +1,17 @@
 # NOTE: I was trying to name RDDs by the following rule: key__value (two "_" between key and value)
-# Run the code using "spark-submit draft.py"
+# Run the code using "spark-submit draft.py hdfs://localhost:9000/temp/project2_test.txt gene_egf_gene"
 
 from pyspark import SparkContext
 import math
 import numpy as np
 import re
+import sys
 
-txt_files = "hdfs://localhost:9000/temp/project2_test.txt"
-input_term = "gene_egf_gene"    # Query term for term-term relevance
-sc = SparkContext("local", "First App")
+# Input file
+txt_files = sys.argv[1]
+# Query term for term-term relevance
+input_term = sys.argv[2]
+sc = SparkContext("local[4]", "First App")
 
 # PART 1: TF-IDF
 
@@ -50,7 +53,7 @@ word__idf = word__num_of_doc.map(lambda pair: (pair[0], math.log(size_of_corpus 
 word__doc_tf = doc_word__tf.map(lambda pair: (pair[0][1], (pair[0][0], pair[1])))
 
 # Reduce by joining RDDs into (word, ((docname, tf), idf))
-joined = sc.parallelize(word__doc_tf.join(word__idf).collect())
+joined = word__doc_tf.join(word__idf)
 
 # Map joined RDD into ((word, docname), tf*idf) by
 word_doc__tfidt = joined.map(lambda pair: ((pair[0], pair[1][0][0]), pair[1][0][1] * pair[1][1]))
@@ -90,15 +93,15 @@ word__denominator = word__squared_tfidt.reduceByKey(lambda x, y: x + y) \
     .map(lambda pair: (pair[0], math.sqrt(pair[1]) * input_sqrt_of_sqr_values))
 
 # Join numerator and denominator to make RDD (word, (numerator, denominator))
-joined_num_and_denum = sc.parallelize(word__numerator.join(word__denominator).collect())
+joined_num_and_denum = word__numerator.join(word__denominator)
 
 # Finally, compute for each word tuples (numerator, denominator), which are exactly Similarity(input_word, word)
-# and then sort them in descending order (sortByKey(False)) by swapping tuples two times
+# and then sort them in descending order (sortByKey(False)) by swapping tuples two times.
+# Use coalesce at the end to move everything to one partition and store result as one file.
 sorted_result = joined_num_and_denum \
     .map(lambda pair: (pair[0], pair[1][0] / pair[1][1])) \
     .map(lambda pair: (pair[1], pair[0])) \
     .sortByKey(False) \
     .map(lambda pair: ((input_term, pair[1]), pair[0])) \
+    .coalesce(1, True) \
     .saveAsTextFile("sorted_result")
-
-# print(sorted_result)
