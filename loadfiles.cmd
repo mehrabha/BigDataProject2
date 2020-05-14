@@ -1,0 +1,1 @@
+hadoop fs -put ./data/gene.txt ./data/data2.txt ./data/data.txt /

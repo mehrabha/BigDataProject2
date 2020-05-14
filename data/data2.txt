@@ -1,0 +1,4 @@
+d1 i love data science
+d2 i hate data
+d3 want A
+d4 sir show sir
