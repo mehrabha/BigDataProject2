@@ -1,11 +1,19 @@
-# Run test using "python ./test_project2_test.py"
+# Run test using "python ./test_project2_test.py gene_egf_gene pair"
 # Tests algorithm for professor's file
 
+import sys
 import pandas as pd
 import numpy as np
 
+# Query term for term-term relevance
+input_term = sys.argv[1]
+# Choose whether we're using pairs or stripes
+pair_or_stripe = sys.argv[2]
+
+result_directory = "result_pair" if (pair_or_stripe == "pair") else "result_stripe"
+
 input_term = 'gene_egf_gene'
-with open('./resources/project2_test.txt', 'r') as f:
+with open('../resources/project2_test.txt', 'r') as f:
     lines = f.read().splitlines()
 
 lines = [line.split() for line in lines]
@@ -41,7 +49,8 @@ pd.set_option('display.max_rows', None)
 
 
 # Automatically compares results from the actual algorithm.
-with open('./sorted_result/part-00000', 'r') as f:
+directory = "../"+result_directory+"/part-00000"
+with open(directory, 'r') as f:
     lines = f.read().splitlines()
 
 lines = [line.replace('(', '').replace(')', '').replace('\'', '').replace(',', '').split() for line in lines]

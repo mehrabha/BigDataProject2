@@ -1,4 +1,0 @@
-from pyspark import SparkContext
-
-data = sc.parallelize(list('Hello World'))
-

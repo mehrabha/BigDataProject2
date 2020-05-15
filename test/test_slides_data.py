@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 
 input_term = 'I'
-with open('./resources/slides_data.txt', 'r') as f:
+with open('../resources/slides_data.txt', 'r') as f:
     lines = f.read().splitlines()
 
 lines = [line.split() for line in lines]
