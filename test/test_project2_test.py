@@ -1,5 +1,5 @@
-# Run test using "python ./test_project2_test.py gene_egf_gene pair"
-# Tests algorithm for professor's file
+# Run test using "python ./test_project2_test.py gene_egf_gene pair". It takes too long to test the new file.
+# Tests algorithm for the first professor's file
 
 import sys
 import pandas as pd

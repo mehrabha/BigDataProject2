@@ -1,8 +1,8 @@
 # NOTE: The names of RDDs follow this rule: key__value (two "_" between key and value)
 # Run the code using :
-# "spark-submit main.py hdfs://localhost:9000/temp/project2_test.txt <gene_???_gene> <number-of-cores> <pair or stripe>"
+# "spark-submit main.py <file path> <gene_???_gene> <number-of-cores> <pair or stripe>"
 # For example, you can run
-# "spark-submit main.py hdfs://localhost:9000/temp/project2_test.txt gene_egf_gene 1 pair"
+# "spark-submit main.py hdfs://localhost:9000/temp/project2_egfr.txt gene_egfr+_gene 1 pair"
 
 from pyspark import SparkContext
 from os import path
@@ -18,7 +18,7 @@ txt_files = sys.argv[1]
 # Query term for term-term relevance
 input_term = sys.argv[2]
 # Regular expression for which we select all the words. In our case, it is gene_???_gene
-regex = re.compile('^(gene_).*(_gene)$')
+regex = re.compile('^(gene_).+(_gene)$')
 if not regex.match(input_term):
     print("Input tern should be gene_???_gene.")
     sys.exit()
@@ -42,7 +42,7 @@ sc = SparkContext(master_local, "Project 2")
 rdd_files = sc.textFile(txt_files)
 
 # Compute TF-IDF and store it in RDD word_doc__tfidf of the form ((word, doc), tfidf) for those words,
-# which correspond to regex. It uses ('^(gene_).*(_gene)$') to select gene_???_gene.
+# which correspond to regex. It uses ('^(gene_).+(_gene)$') to select gene_???_gene.
 word_doc__tfidf = features.compute_tfidf(rdd_files, sc, regex)
 
 # Compute term-term relevance using either pairs or stripes for given input term and store it in

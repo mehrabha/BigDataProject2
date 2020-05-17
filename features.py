@@ -27,11 +27,11 @@ def compute_tfidf(rdd_files_from_input, sc, regex):
     doc_word__tf = doc_word__local_tf.reduceByKey(lambda x, y: x + y)
 
     # Reduced RDD (word, number of distinct docs in which this word occurs)
-    word__num_of_doc = sc.parallelize(list(doc_word__tf
-                                           .map(lambda pair: (pair[0][1], pair[0][0]))
-                                           .distinct()
-                                           .countByKey()
-                                           .items()))
+    word__num_of_doc = doc_word__tf \
+        .map(lambda pair: (pair[0][1], pair[0][0])) \
+        .distinct() \
+        .map(lambda pair: (pair[0], 1)) \
+        .reduceByKey(lambda x, y: x + y)
 
     # RDD (word, idf) computed by mapping word__num_of_doc into
     # (word, log10(size_of_corpus/(number of docs in which word occur)))
@@ -62,10 +62,10 @@ def compute_term_term_using_pairs(word_doc__tfidf, input_term):
     # Constant sqrt(tfidf1^2+tfidf2^2+...) for input_term
     input_sqrt_of_sqr_values = np.sqrt(np.sum([x ** 2 for x in input_dictionary.values()]))
 
-    # Mapping RDD is ((word, docname), tf*idf) into RDD (word, tfidf*input_dictionary[docname]).
+    # Mapping RDD ((word, docname), tf*idf) into RDD (word, tfidf*input_dictionary[docname]).
     # If that docname not in the dictionary, multiply by 0.
     # Then reducing into RDD (word, numerator) by summarizing tfidf*input_dictionary[docname] for every docname,
-    # where numerator is a numerator for particular word built by the formula from page 70.
+    # where numerator is a numerator for particular word built by the formula from slide 70 in Lecture 9.
     word__numerator = word_doc__tfidf \
         .map(lambda pair: (pair[0][0], pair[1] * input_dictionary.get(pair[0][1], 0))) \
         .reduceByKey(lambda x, y: x + y)
@@ -73,14 +73,15 @@ def compute_term_term_using_pairs(word_doc__tfidf, input_term):
     # From ((word, docname), tf*idf) map RDD is (word, (tf*idf)^2)
     word__squared_tfidf = word_doc__tfidf.map(lambda pair: (pair[0][0], (pair[1]) ** 2))
     # Then reduced it to RDD (word, sqrt(tfidf1^2+tfidf2^2+...)*input_sqrt_of_sqr_values) to create a denominator
-    # from slide 70 for each word
-    word__denominator = word__squared_tfidf.reduceByKey(lambda x, y: x + y) \
+    # from slide 70 in Lecture 9 for each word.
+    word__denominator = word__squared_tfidf \
+        .reduceByKey(lambda x, y: x + y) \
         .map(lambda pair: (pair[0], math.sqrt(pair[1]) * input_sqrt_of_sqr_values))
 
     # Join numerator and denominator to make RDD (word, (numerator, denominator))
     joined_num_and_denum = word__numerator.join(word__denominator)
 
-    # Finally, compute for each word tuples (numerator, denominator), which are exactly Similarity(input_word, word)
+    # Finally, compute for each word division of numerator/denominator, which are exactly Similarity(input_word, word)
     # and then sort them in descending order (sortByKey(False)) by swapping tuples two times.
     # At the end we add input term to the key to make sorted_result = ((input_term, word), similarity(input_term, word))
     sorted_result = joined_num_and_denum \
@@ -122,7 +123,7 @@ def compute_term_term_using_stripes(word_doc__tfidf, input_term):
     # From ((word, docname), tf*idf) map RDD is (word, (tf*idf)^2)
     word__squared_tfidf = word_doc__tfidf.map(lambda pair: (pair[0][0], (pair[1]) ** 2))
     # Then reduced it to RDD (word, sqrt(tfidf1^2+tfidf2^2+...)*input_sqrt_of_sqr_values) to create a denominator
-    # from slide 70 for each word
+    # from slide 70 in Lecture 9 for each word.
     word__denominator = word__squared_tfidf.reduceByKey(lambda x, y: x + y) \
         .map(lambda pair: (pair[0], math.sqrt(pair[1]) * input_sqrt_of_sqr_values))
 
