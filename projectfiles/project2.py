@@ -23,6 +23,7 @@ class Project2:
         join = a.join(b)
         # calculate tf * idf -> (tuple, tfidf)
         self.tfidf = join.map(lambda x: ( (x[0], x[1][0][0]), x[1][0][1] * x[1][1] ))
+        self.tfidf.saveAsTextFile('./results/task1/')
     
     def task2(self, pattern, query):
         # filter tfidf by query
@@ -33,20 +34,16 @@ class Project2:
         r = r.map(lambda x: ( x[0], math.sqrt(x[1]) ))
         # map tfidf to list for word -> (word: {docname: tfidf}),
         tlist = filtered.map(lambda x: (x[0][0], { x[0][1]: x[1] }))
-        # reduce lists -> (word: {[}doc1, doc2...})
+        # reduce lists -> (word: {doc1, doc2...})
         tlist = tlist.reduceByKey(lambda x, y: reducer(x, y))
         # join mapped list and squareroots -> (word: [docs], root)
         join = tlist.join(r)
         # make word pairs -> (word:[docs], word:[docs])
         pairs = list(permutations(join.collect(), 2))
+        pairs = filterByQuery(pairs, query)
         # calculate numerators, divide by roots -> (similarity: word,word)
         rel = map(lambda x: ( similarity(x[0][1], x[1][1]), (x[0][0], x[1][0]) ), pairs)
         self.rel = sc.parallelize(rel).sortByKey(False)
-
-    def results(self):
-        if os.path.exists('./results'):
-            shutil.rmtree('./results')
-        self.tfidf.saveAsTextFile('./results/task1/')
         self.rel.saveAsTextFile('./results/task2/')
 
 # returns [ (docname, word: tf), ...] from word list
@@ -58,6 +55,13 @@ def extract(l) -> list:
         tup = ( (docname, word), 1/len(words))
         result.append(tup)
     return result
+
+def filterByQuery(l, query):
+    filtered = []
+    for elem in l:
+        if elem[0][0] == query or elem[1][0] == query:
+            filtered.append(elem)
+    return filtered
 
 # merges dict b into a, returns a
 def reducer(a, b) -> dict:
