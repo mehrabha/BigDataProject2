@@ -24,9 +24,9 @@ class Project2:
         # calculate tf * idf -> (tuple, tfidf)
         self.tfidf = join.map(lambda x: ( (x[0], x[1][0][0]), x[1][0][1] * x[1][1] ))
     
-    def task2(self, query):
+    def task2(self, pattern, query):
         # filter tfidf by query
-        filtered = self.tfidf.filter(lambda x: queryfilter(x[0][0], query))
+        filtered = self.tfidf.filter(lambda x: queryfilter(x[0][0], pattern))
         # calculate sum squared for word
         r = filtered.map(lambda x: ( x[0][0], x[1] * x[1] )).reduceByKey(lambda x, y: x + y)
         # Take square root
