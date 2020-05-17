@@ -1,3 +1,4 @@
+# CSCI 493.71 Project 2 by Liudmila Zyrianova and Mehrab Hafiz.
 # NOTE: The names of RDDs follow this rule: key__value (two "_" between key and value)
 # Run the code using :
 # "spark-submit main.py <file path> <gene_???_gene> <number-of-cores> <pair or stripe>"
@@ -31,7 +32,7 @@ pair_or_stripe = sys.argv[4]
 if not (pair_or_stripe == "pair" or pair_or_stripe == "stripe"):
     print("Choose pair or stripe.")
     sys.exit()
-result_directory = "result_pair" if (pair_or_stripe == "pair") else "result_stripe"
+result_directory = "result"
 
 # Set up spark context
 master_local = "local" if (num_cores == "1") else "local[" + num_cores + "]"

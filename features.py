@@ -1,3 +1,4 @@
+# CSCI 493.71 Project 2 by Liudmila Zyrianova and Mehrab Hafiz.
 # NOTE: The names of RDDs follow this rule: key__value (two "_" between key and value)
 import re
 import math

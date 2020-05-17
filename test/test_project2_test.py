@@ -1,4 +1,4 @@
-# Run test using "python ./test_project2_test.py gene_egf_gene pair". It takes too long to test the new file.
+# Run test using "python ./test_project2_test.py gene_egfr+_gene". It takes very long to test the new file.
 # Tests algorithm for the first professor's file
 
 import sys
@@ -7,13 +7,10 @@ import numpy as np
 
 # Query term for term-term relevance
 input_term = sys.argv[1]
-# Choose whether we're using pairs or stripes
-pair_or_stripe = sys.argv[2]
 
-result_directory = "result_pair" if (pair_or_stripe == "pair") else "result_stripe"
+result_directory = "result"
 
-input_term = 'gene_egf_gene'
-with open('../resources/project2_test.txt', 'r') as f:
+with open('../resources/project2_egfr.txt', 'r') as f:
     lines = f.read().splitlines()
 
 lines = [line.split() for line in lines]
@@ -53,18 +50,37 @@ directory = "../"+result_directory+"/part-00000"
 with open(directory, 'r') as f:
     lines = f.read().splitlines()
 
-lines = [line.replace('(', '').replace(')', '').replace('\'', '').replace(',', '').split() for line in lines]
-errors = []
+
+def process_line(l):
+    l = eval(l)
+    return (l[0][1], l[1])
+
+lines = [process_line(line) for line in lines]
+
+true_values = {}
+errors = {}
 for line in lines:
-    gene = line[1]
-    r = float(line[2])
-    rr = float(result[result.index == gene])
-    errors.append(np.abs(r - rr))
+    gene = line[0]
+    r = float(line[1])
+    true_values[gene] = r
+    try:
+        rr = float(result[result.index == gene])
+    except:
+        print(result[result.index==gene])
+        print(gene, r, line)
+
+    errors[gene] = (np.abs(r - rr))
 
 # Finds maximal error, which is the difference in results
-errors = sorted(errors)
-if errors[-1] < 0.0000000001:
-    print("Test passed! Maximal error is", errors[-1])
+
+gene_sorted = sorted(errors.keys(), key=lambda x: errors[x])
+
+for gene in gene_sorted[-10:]:
+    print(gene, errors[gene])
+    print(float(result[result.index == gene]), true_values[gene])
+
+if errors[gene_sorted[-1]] < 1e-5:
+    print("Test passed!")
 else:
     print("Test failed")
 
