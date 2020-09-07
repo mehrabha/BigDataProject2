@@ -3,7 +3,7 @@ Using MapReduce algorithm and Spark implementation.
 
 This application takes in a collection of documents to solve the following problems:
 * Compute Term Frequency – Inverse Document Frequency
-* Computer and sort term-term relevance
+* Compute and sort term-term relevance
 
 Requirements:
 * Hadoop
